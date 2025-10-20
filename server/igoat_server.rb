@@ -64,6 +64,7 @@ $request_count = 0
 $mutex = Mutex.new
 
 class GoatServer < Sinatra::Base
+  set :trust_x_forwarded_proto, false
 
   # Endpoint definitions.
   post "/igoat/user" do
@@ -78,8 +79,15 @@ class GoatServer < Sinatra::Base
   end
 
   post "/igoat/exercise/certificatePinning" do
-    if (!request.secure?)
+    unless request.secure?
+      # Log the insecure access attempt for server operators
       log_stolen_info "The user's account information was stolen by anyone on your Wi-Fi!"
+
+      # Explicitly refuse to process requests over an insecure transport.
+      # Return a clear HTTP error so clients are not left with silent failures.
+      status 403
+      content_type :json
+      body JSON.generate({ error: "insecure_transport", message: "HTTPS is required for this endpoint" })
     else
       headers "X-Goat-Secure" => request.secure?.to_s
       content_type :json

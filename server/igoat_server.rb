@@ -72,7 +72,12 @@ class GoatServer < Sinatra::Base
     end
     headers "X-Goat-Secure" => request.secure?.to_s
     content_type :json
-    json = JSON.parse request.body.read
+    begin
+      json = JSON.parse request.body.read
+    rescue JSON::ParserError => e
+      status 400
+      return JSON.pretty_generate({ "error" => "Invalid JSON in request body" })
+    end
     json['id'] = increment_count
     JSON.pretty_generate json
   end
@@ -83,7 +88,12 @@ class GoatServer < Sinatra::Base
     else
       headers "X-Goat-Secure" => request.secure?.to_s
       content_type :json
+      begin
       json = JSON.parse request.body.read
+    rescue JSON::ParserError => e
+      status 400
+      return JSON.pretty_generate({ "error" => "Invalid JSON in request body" })
+    end
       json['id'] = increment_count
       JSON.pretty_generate json
     end
@@ -143,7 +153,12 @@ class HostileSSLServer < Sinatra::Base
       headers "X-Goat-Secure" => request.secure?.to_s
       headers "X-Goat-LegitimateServer" => "false"
       content_type :json
+      begin
       json = JSON.parse request.body.read
+    rescue JSON::ParserError => e
+      status 400
+      return JSON.pretty_generate({ "error" => "Invalid JSON in request body" })
+    end
       json['id'] = increment_count
       JSON.pretty_generate json
   end

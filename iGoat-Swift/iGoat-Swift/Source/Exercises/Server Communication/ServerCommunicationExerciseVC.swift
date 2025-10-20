@@ -38,8 +38,11 @@ class ServerCommunicationExerciseVC: UIViewController {
 
             URLSession(configuration: .default).dataTask(with: request, completionHandler: { (data, response, error) in
                 
-                if let sslEnabled = (response as? HTTPURLResponse)?.allHeaderFields["X-Goat-Secure"] as? String {
-                    if sslEnabled.boolValue {
+                // Do not trust server-supplied headers to determine whether the transport was secure.
+                // Instead, use the request URL scheme as an indicator. For real assurance that TLS
+                // was used and validated, implement proper server trust evaluation / certificate pinning.
+                if let _ = response as? HTTPURLResponse {
+                    if request.url?.scheme?.lowercased() == "https" {
                         UIAlertController.showAlertWith(title: "Congratulations!", message: "The user's account info was protected in transit.")
                     } else {
                         UIAlertController.showAlertWith(title: "Owned", message: "The user's account profile info was stolen by someone on your Wi-Fi!")

@@ -65,7 +65,8 @@ class WebkitCacheExerciseVC: UIViewController {
     @IBAction func verify() {
         let enteredStr = textField.text ?? ""
         if let passcode = decrypt(key: enteredStr) {
-            UIAlertController.showAlertWith(title: "Success", message: "Passcode: \(passcode)")
+            // Do not display decrypted secrets in UI. Show a generic success message instead.
+            UIAlertController.showAlertWith(title: "Success", message: "Decryption successful")
             return
         }
         UIAlertController.showAlertWith(title: "Fail", message: "Try Again!!")

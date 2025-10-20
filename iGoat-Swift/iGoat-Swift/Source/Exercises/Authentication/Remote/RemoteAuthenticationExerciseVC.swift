@@ -3,7 +3,16 @@ import UIKit
 enum RAConstants {
     enum EndPoints {
         static func loginUser(name: String, password: String) -> String {
-            return "http://localhost:8080/igoat/token?username=\(name)&password=\(password)"
+            var components = URLComponents()
+            components.scheme = "http"
+            components.host = "localhost"
+            components.port = 8080
+            components.path = "/igoat/token"
+            components.queryItems = [
+                URLQueryItem(name: "username", value: name),
+                URLQueryItem(name: "password", value: password)
+            ]
+            return components.url?.absoluteString ?? "http://localhost:8080/igoat/token"
         }
     }
 }

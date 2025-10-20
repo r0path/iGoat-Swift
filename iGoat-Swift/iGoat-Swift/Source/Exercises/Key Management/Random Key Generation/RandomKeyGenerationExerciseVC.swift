@@ -1,5 +1,6 @@
 import UIKit
 import SQLite3
+import Security
 
 let SQLITE_TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
 
@@ -8,9 +9,41 @@ class RandomKeyGenerationExerciseVC: UIViewController {
     @IBOutlet weak var passwordField: UITextField!
     @IBOutlet weak var credentialStorageSwitch: UISwitch!
     @IBOutlet weak var secretKeyField: UITextField!
-    
+
+    // Generate or retrieve a cryptographically secure encryption key stored in the Keychain.
+    private func getOrCreateEncryptionKey() -> String? {
+        let service = "com.owasp.igoat.credentials"
+        let account = "dbEncryptionKey"
+        // Try to fetch existing key from Keychain
+        var query: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
+                                     kSecAttrService as String: service,
+                                     kSecAttrAccount as String: account,
+                                     kSecReturnData as String: true]
+        var item: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &item)
+        if status == errSecSuccess {
+            if let data = item as? Data, let keyString = String(data: data, encoding: .utf8) {
+                return keyString
+            }
+        }
+        // Generate new 32-byte (256-bit) key
+        var keyData = Data(count: 32)
+        let result = keyData.withUnsafeMutableBytes { ptr in
+            SecRandomCopyBytes(kSecRandomDefault, 32, ptr.baseAddress!)
+        }
+        if result != errSecSuccess { return nil }
+        let keyString = keyData.base64EncodedString()
+        // Save to Keychain
+        let addQuery: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
+                                       kSecAttrService as String: service,
+                                       kSecAttrAccount as String: account,
+                                       kSecValueData as String: keyString.data(using: .utf8)!]
+        SecItemAdd(addQuery as CFDictionary, nil)
+        return keyString
+    }
+
     @IBAction func verifyItemPressed(_ sender: Any) {
-        let encryptionKeyStr = UIDevice.current.identifierForVendor?.uuidString
+        let encryptionKeyStr = getOrCreateEncryptionKey()
         let message = (encryptionKeyStr == secretKeyField.text) ? "Success!!" : "Try Harder!!"
         UIAlertController.showAlertWith(title: "iGoat", message: message)
     }
@@ -31,12 +64,13 @@ class RandomKeyGenerationExerciseVC: UIViewController {
         let path = pathDocumentDirectory(fileName: "credentials.sqlite")
         if sqlite3_open(path, &credentialsDB) == SQLITE_OK {
             var compiledStmt: OpaquePointer?
-            let deviceID = UIDevice.current.identifierForVendor?.uuidString
-            if let aVendor = UIDevice.current.identifierForVendor {
-                print("encryption key is \(aVendor)")
+            // Use a cryptographically strong random key stored in the Keychain instead of a device identifier.
+            if let key = getOrCreateEncryptionKey() {
+                let encrptStmt = "PRAGMA key = '\(key)'"
+                sqlite3_exec(credentialsDB, encrptStmt, nil, nil, nil)
+            } else {
+                print("Failed to obtain encryption key. Proceeding without setting a DB key.")
             }
-            let encrptStmt = "PRAGMA key = '\(deviceID ?? "")'"
-            sqlite3_exec(credentialsDB, encrptStmt, nil, nil, nil)
             // Create the table if it doesn't exist.
             let createStmt = "CREATE TABLE IF NOT EXISTS creds (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, password TEXT);"
             

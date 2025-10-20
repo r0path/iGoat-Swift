@@ -37,17 +37,17 @@ class ServerCommunicationExerciseVC: UIViewController {
             request.httpBody = jsonData
 
             URLSession(configuration: .default).dataTask(with: request, completionHandler: { (data, response, error) in
-                
-                if let sslEnabled = (response as? HTTPURLResponse)?.allHeaderFields["X-Goat-Secure"] as? String {
-                    if sslEnabled.boolValue {
-                        UIAlertController.showAlertWith(title: "Congratulations!", message: "The user's account info was protected in transit.")
+                DispatchQueue.main.async {
+                    if let sslEnabled = (response as? HTTPURLResponse)?.allHeaderFields["X-Goat-Secure"] as? String {
+                        if sslEnabled.boolValue {
+                            UIAlertController.showAlertWith(title: "Congratulations!", message: "The user's account info was protected in transit.")
+                        } else {
+                            UIAlertController.showAlertWith(title: "Owned", message: "The user's account profile info was stolen by someone on your Wi-Fi!")
+                        }
                     } else {
-                        UIAlertController.showAlertWith(title: "Owned", message: "The user's account profile info was stolen by someone on your Wi-Fi!")
+                        UIAlertController.showAlertWith(title: "Error", message: "Malformed data. There could be something wrong in your connection. See the documentation in igoat_server.rb for additional info.")
                     }
-                } else {
-                    UIAlertController.showAlertWith(title: "Error", message: "Malformed data. There could be something wrong in your connection. See the documentation in igoat_server.rb for additional info.")
                 }
-                
             }).resume()
         } catch {
             print(error.localizedDescription)

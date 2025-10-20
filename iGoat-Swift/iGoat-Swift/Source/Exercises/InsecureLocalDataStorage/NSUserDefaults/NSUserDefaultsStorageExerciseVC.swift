@@ -10,14 +10,16 @@ class NSUserDefaultsStorageExerciseVC: UIViewController {
     }
 
     func storeInDefaults() {
-        UserDefaults.standard.set("53cr3tP", forKey: "PIN")
+        // Store the PIN securely in the Keychain instead of UserDefaults
+        let keychainItem = KeychainPasswordItem(service: "iGoat.PinService", account: "PIN")
+        try? keychainItem.savePassword("53cr3tP")
     }
     
     @IBAction func verifyItemPressed() {
         if textfield.text?.isEmpty == true || textfield.text == "" {
             UIAlertController.showAlertWith(title: "Error", message: "Enter details!")
         } else if
-            let pin = UserDefaults.standard.object(forKey: "PIN") as? String,
+            let pin = try? KeychainPasswordItem(service: "iGoat.PinService", account: "PIN").readPassword(),
             pin == textfield.text {
             textfield.text = ""
             UIAlertController.showAlertWith(title: "Success",

@@ -28,17 +28,9 @@ class RealmExerciseVC: UIViewController {
     }
 
     func saveData() throws {
-        if RCreditInfo.allObjects().count == 0 {
-            let realm = RLMRealm.default()
-            let creditInfo = RCreditInfo()
-            creditInfo.name = RealmCardName
-            creditInfo.cardNumber = RealmCardNumber
-            creditInfo.cvv = RealmCardCVV
-            realm.beginWriteTransaction()
-            realm.add(creditInfo)
-            try realm.commitWriteTransactionWithoutNotifying([])
-        }
-    
+        // Do not persist sensitive credit card data to disk.
+        // Keep the sample credit card data only in memory via constants.
+        return
     }
     
     @IBAction func verifyItemPressed() {
@@ -48,13 +40,13 @@ class RealmExerciseVC: UIViewController {
     }
     
     func verifyName(name:String, number:String, cvv:String) -> Bool {
+        // Compare against in-memory sample data instead of reading sensitive data from local storage.
+        let storedName = RealmCardName
+        let storedNumber = RealmCardNumber.replacingOccurrences(of: " ", with: "")
+        let storedCVV = RealmCardCVV
 
-        guard let creditInfo = RCreditInfo.allObjects().firstObject() as? RCreditInfo else {
-            return false
-        }
-        
-        return name == creditInfo.name &&
-        number.replacingOccurrences(of: " ", with: "") == creditInfo.cardNumber?.replacingOccurrences(of: " ", with: "") &&
-        cvv == creditInfo.cvv
+        return name == storedName &&
+            number.replacingOccurrences(of: " ", with: "") == storedNumber &&
+            cvv == storedCVV
     }
 }

@@ -13,13 +13,24 @@ class SQLInjectionExerciseVC: UIViewController {
         }
         
         var searchStr = "%"
-        if !(searchField.text?.isEmpty ?? true) {
-             searchStr = "%" + "\(searchField.text!)" + "%"
+        if let text = searchField.text, !text.isEmpty {
+            searchStr = "%\(text)%"
         }
-        
-        let query = "SELECT title FROM article WHERE title LIKE '\(searchStr)' AND premium=0"
+
+        let query = "SELECT title FROM article WHERE title LIKE ? AND premium=0"
         var stmt: OpaquePointer?
-        sqlite3_prepare_v2(db, query, -1, &stmt, nil)
+        if sqlite3_prepare_v2(db, query, -1, &stmt, nil) == SQLITE_OK {
+            // Bind the user-controlled search string as a parameter to avoid SQL injection
+            let searchCString = (searchStr as NSString).utf8String
+            let SQLITE_TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+            sqlite3_bind_text(stmt, 1, searchCString, -1, SQLITE_TRANSIENT)
+        } else {
+            // Preparing the statement failed; clean up and return
+            sqlite3_finalize(stmt)
+            sqlite3_close(db)
+            UIAlertController.showAlertWith(title: "Snap!", message: "Error preparing articles query.")
+            return
+        }
         var articleTitles = [String]()
         while sqlite3_step(stmt) == SQLITE_ROW {
             let title = String(cString: sqlite3_column_text(stmt, 0))

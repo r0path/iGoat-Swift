@@ -44,12 +44,23 @@ extension RemoteAuthenticationExerciseVC {
             DispatchQueue.main.async {
                 SVProgressHUD.dismiss()
                 if let response = response as? HTTPURLResponse {
-                    if let _ = response.allHeaderFields["X-Goat-Secure"] as? Bool {
-                        UIAlertController.showAlertWith(title: "Congratulations!",
-                                                        message: "The user's authentication credentials were protected in transit.")
-                    } else {
-                        UIAlertController.showAlertWith(title: "Owned",
-                                                        message: "The user's authentication credentials were stolen by someone on your Wi-Fi!")
+                    if let header = response.allHeaderFields["X-Goat-Secure"] {
+                        var isSecure = false
+                        if let boolVal = header as? Bool {
+                            isSecure = boolVal
+                        } else if let numVal = header as? NSNumber {
+                            isSecure = numVal.boolValue
+                        } else if let strVal = header as? String {
+                            let trimmed = strVal.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                            isSecure = (trimmed == "true" || trimmed == "1")
+                        }
+                        if isSecure {
+                            UIAlertController.showAlertWith(title: "Congratulations!",
+                                                            message: "The user's authentication credentials were protected in transit.")
+                        } else {
+                            UIAlertController.showAlertWith(title: "Owned",
+                                                            message: "The user's authentication credentials were stolen by someone on your Wi-Fi!")
+                        }
                     }
                 } else {
                     UIAlertController.showAlertWith(title: "Error", message: "Operation could not be completed")

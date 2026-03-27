@@ -81,6 +81,12 @@ class GoatServer < Sinatra::Base
     if (!request.secure?)
       log_stolen_info "The user's account information was stolen by anyone on your Wi-Fi!"
     else
+      # Require a valid session cookie before accepting/recording data.
+      # Clients should obtain a session via GET /igoat/token (over HTTPS).
+      unless request.cookies && request.cookies["SessionID"]
+        halt 401, "Unauthorized"
+      end
+
       headers "X-Goat-Secure" => request.secure?.to_s
       content_type :json
       json = JSON.parse request.body.read

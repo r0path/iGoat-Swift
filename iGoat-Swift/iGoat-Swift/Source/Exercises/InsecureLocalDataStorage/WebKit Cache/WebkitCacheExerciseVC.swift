@@ -53,7 +53,9 @@ class WebkitCacheExerciseVC: UIViewController {
             DispatchQueue.main.async { [weak self] in
                 SVProgressHUD.dismiss()
                 if let response = response as? HTTPURLResponse, response.statusCode == 200, let _ = data {
-                    self?.responseLabel.text = "\(cipher)"
+                    // Do not expose embedded cipher material in UI on generic HTTP 200 responses.
+                    // Only indicate success without revealing sensitive data.
+                    self?.responseLabel.text = "Response received"
                 } else {
                     UIAlertController.showAlertWith(title: "Error", message: "Operation could not be completed")
                 }

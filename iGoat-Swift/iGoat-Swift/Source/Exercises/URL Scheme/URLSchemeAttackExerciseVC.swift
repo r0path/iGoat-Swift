@@ -9,12 +9,17 @@ class URLSchemeAttackExerciseVC: UIViewController {
         let mobileNoText = mobileNumberTxtField.text ?? ""
         let messageText = messageTxtField.text ?? ""
         
-        let urlSchemeText = "iGoat://?contactNumber=\(mobileNoText)&message=\(messageText)"
-        let urlString = urlSchemeText.addingPercentEncoding(withAllowedCharacters: CharacterSet.urlQueryAllowed)
-        
+        var url: URL? = nil
+        if var components = URLComponents(string: "iGoat://") {
+            components.queryItems = [
+                URLQueryItem(name: "contactNumber", value: mobileNoText),
+                URLQueryItem(name: "message", value: messageText)
+            ]
+            url = components.url
+        }
+
         let app = UIApplication.shared
-        if let urlString = urlString,
-            let url = URL(string: urlString),
+        if let url = url,
             app.canOpenURL(url) == true
         {
             if #available(iOS 10.0, *) {

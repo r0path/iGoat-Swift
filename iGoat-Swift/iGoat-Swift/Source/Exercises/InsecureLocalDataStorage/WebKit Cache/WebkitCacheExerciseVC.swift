@@ -42,7 +42,9 @@ class WebkitCacheExerciseVC: UIViewController {
                             forHTTPHeaderField: "Content-Type")
         urlRequest.setValue("application/xhtml+xml,application/xml",
                             forHTTPHeaderField: "Accept")
-        urlRequest.cachePolicy = .returnCacheDataElseLoad
+        // Do not trust cached responses for POST requests or authentication-sensitive checks
+        // Force a fresh network load to avoid serving stale or poisoned cached data
+        urlRequest.cachePolicy = .reloadIgnoringLocalCacheData
         urlRequest.httpBody = "token=key".data(using: .utf8)
         urlRequest.httpMethod = "POST"
         

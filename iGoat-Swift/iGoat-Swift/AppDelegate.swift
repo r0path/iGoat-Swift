@@ -19,8 +19,15 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             let queryInfo = url.parmetersInfo
             {
                 let mobileNo = queryInfo["contactNumber"] ?? ""
-            let message = queryInfo["message"] ?? ""
-            UIAlertController.showAlertWith(title: "iGoat", message: "Message \"\(message)\" sent to \(mobileNo)")
+            let rawMessage = queryInfo["message"] ?? ""
+            // Sanitize input: strip HTML tags and control characters to reduce risk of injection if these values are reused in WebViews or other renderers.
+            let sanitizedMessage = rawMessage.replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
+                .replacingOccurrences(of: "\n", with: " ")
+                .replacingOccurrences(of: "\r", with: " ")
+            let displayMessage = sanitizedMessage.trimmingCharacters(in: .whitespacesAndNewlines)
+            // Limit length to avoid extremely long inputs
+            let safeMessage = displayMessage.count > 1000 ? String(displayMessage.prefix(1000)) : displayMessage
+            UIAlertController.showAlertWith(title: "iGoat", message: "Message \"\(safeMessage)\" sent to \(mobileNo)")
                 return true
         }
         return false

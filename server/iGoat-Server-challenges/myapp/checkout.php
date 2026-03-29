@@ -2,13 +2,15 @@
 
 echo "<h1> Checkout </h1>";
 
-$checksum = $_POST['checksum'];
+$checksum = isset($_POST['checksum']) ? $_POST['checksum'] : '';
 $secret = "H@cKIm_2@15*nu11(0N";
 
-$newmsg = urldecode($_POST['msg']);
+$newmsg = isset($_POST['msg']) ? urldecode($_POST['msg']) : '';
 
 
-if($checksum === hash("sha256", $secret . $newmsg))
+$expected = hash_hmac("sha256", $newmsg, $secret);
+
+if (hash_equals($expected, $checksum))
 {
 	$a = explode("|" , $newmsg);
         $price = end($a);

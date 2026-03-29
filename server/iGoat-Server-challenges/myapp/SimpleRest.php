@@ -5,7 +5,9 @@
   public function setHttpHeaders($contentType, $statusCode){
     $statusMessage = $this -> getHttpStatusMessage($statusCode);
 	header($this->httpVersion." ".$statusCode." ".$statusMessage);
-	header("Content-Type:".$contentType);
+	// Sanitize content type to prevent header injection (strip CR and LF)
+    $safeContentType = is_string($contentType) ? str_replace(array("\r","\n"), '', $contentType) : '';
+    header("Content-Type: ".$safeContentType);
   }
   
   public function getHttpStatusMessage($statusCode){

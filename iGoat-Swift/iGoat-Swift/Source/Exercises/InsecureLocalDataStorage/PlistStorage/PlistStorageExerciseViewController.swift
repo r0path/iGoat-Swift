@@ -7,8 +7,9 @@ class PlistStorageExerciseViewController: UIViewController {
     @IBOutlet weak var txt_user: UITextField!
     @IBOutlet weak var txt_pwd: UITextField!
     
-    let plistPath = NSHomeDirectory() + "/Documents/Credentials.plist"
-    let bundlePath = Bundle.main.resourcePath!.appending("/Credentials.plist")
+    // Load credentials directly from app bundle to avoid storing plaintext credentials in Documents directory
+    let bundlePath = Bundle.main.path(forResource: "Credentials", ofType: "plist")!
+    let plistPath = bundlePath
     
     override func viewDidLoad() {
         super.viewDidLoad()

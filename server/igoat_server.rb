@@ -119,9 +119,11 @@ class GoatServer < Sinatra::Base
   end
 
   def log_stolen_info(message)
-    puts "\n********************************************************************************"
-    puts "WARNING: #{message}"
-    puts "********************************************************************************\n\n"
+    # Do not print message contents to stdout/stderr to avoid accidental leakage of sensitive data.
+    # Only log a generic warning; details are intentionally suppressed.
+    STDERR.puts "\n********************************************************************************"
+    STDERR.puts "WARNING: Sensitive information captured (details suppressed)"
+    STDERR.puts "********************************************************************************\n\n"
   end
 
   def log(message)
@@ -171,9 +173,11 @@ class HostileSSLServer < Sinatra::Base
   end
 
   def log_stolen_info(message)
-    puts "\n********************************************************************************"
-    puts "WARNING: #{message}"
-    puts "********************************************************************************\n\n"
+    # Do not print message contents to stdout/stderr to avoid accidental leakage of sensitive data.
+    # Only log a generic warning; details are intentionally suppressed.
+    STDERR.puts "\n********************************************************************************"
+    STDERR.puts "WARNING: Sensitive information captured (details suppressed)"
+    STDERR.puts "********************************************************************************\n\n"
   end
 
   def log(message)

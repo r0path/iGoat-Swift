@@ -91,30 +91,41 @@ class WebkitCacheExerciseVC: UIViewController {
     }
     
     func pbkdf2(password: String, salt: Data, keyByteCount: Int, rounds: Int = 1000) -> Data? {
-        let passwordData = password.data(using:String.Encoding.utf8)!
-        var derivedKeyData1 = Data(repeating:0, count:keyByteCount)
-        var derivedKeyData = derivedKeyData1
-        
-        let derivationStatus = derivedKeyData1.withUnsafeMutableBytes {derivedKeyBytes in
-            salt.withUnsafeBytes { saltBytes in
-                CCKeyDerivationPBKDF(
-                    CCPBKDFAlgorithm(kCCPBKDF2),
-                    password, passwordData.count,
-                    saltBytes, salt.count,
-                    CCPBKDFAlgorithm(kCCPRFHmacAlgSHA256),
-                    UInt32(rounds),
-                    derivedKeyBytes, derivedKeyData.count)
+        // Convert password to bytes and derive into a single mutable buffer.
+        let passwordData = password.data(using: .utf8)!
+        var derivedKeyData = Data(repeating: 0, count: keyByteCount)
+
+        let derivationStatus = derivedKeyData.withUnsafeMutableBytes { derivedKeyBytes in
+            passwordData.withUnsafeBytes { passwordBytes in
+                salt.withUnsafeBytes { saltBytes in
+                    // CCKeyDerivationPBKDF expects a pointer to the password bytes (as C char *)
+                    // and a pointer to the salt bytes. Use the derivedKeyData buffer for output.
+                    let passwordPtr = passwordBytes.baseAddress!.assumingMemoryBound(to: Int8.self)
+                    let saltPtr = saltBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
+                    let derivedKeyPtr = derivedKeyBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
+
+                    return CCKeyDerivationPBKDF(
+                        CCPBKDFAlgorithm(kCCPBKDF2),
+                        passwordPtr, passwordData.count,
+                        saltPtr, salt.count,
+                        CCPseudoRandomAlgorithm(kCCPRFHmacAlgSHA256),
+                        UInt32(rounds),
+                        derivedKeyPtr, derivedKeyData.count)
+                }
             }
         }
+
         if (derivationStatus != 0) {
             print("Error: \(derivationStatus)")
             return nil;
         }
-        
+
         return derivedKeyData
     }
 
-    // The iv is prefixed to the encrypted data
+    // The iv is prefixed to the encrypted data. If no IV is present the function
+    // falls back to passing nil to CCCrypt to preserve previous behavior for the
+    // exercise fixtures.
     func aesCBCDecrypt(data:Data, keyData:Data) -> Data? {
         let keyLength = keyData.count
         let validKeyLengths = [kCCKeySizeAES128, kCCKeySizeAES192, kCCKeySizeAES256]
@@ -122,38 +133,60 @@ class WebkitCacheExerciseVC: UIViewController {
             print("Invalid key length")
             return nil
         }
-        
-        let clearLength = size_t(500)
-        var clearData = Data(count:clearLength)
-        
-        var numBytesDecrypted :size_t = 0
-        let options   = CCOptions(kCCOptionPKCS7Padding)
-        
-        
-        let cryptStatus = clearData.withUnsafeMutableBytes {cryptBytes in
-            data.withUnsafeBytes {dataBytes in
-                keyData.withUnsafeBytes {keyBytes in
-                    
-                    CCCrypt(CCOperation(kCCDecrypt),
-                            CCAlgorithm(kCCAlgorithmAES128),
-                            options,
-                            keyBytes, keyLength,
-                            nil,
-                            dataBytes, data.count,
-                            cryptBytes, clearLength,
-                            &numBytesDecrypted)
+
+        let ivSize = kCCBlockSizeAES128
+
+        // Extract IV if present (prefixed to ciphertext)
+        var ivData: Data? = nil
+        var ciphertext = data
+        if data.count > ivSize {
+            ivData = data.subdata(in: 0..<ivSize)
+            ciphertext = data.subdata(in: ivSize..<data.count)
+        }
+
+        // Allocate output buffer sized to ciphertext + one block for padding
+        let clearLength = ciphertext.count + ivSize
+        var clearData = Data(count: clearLength)
+
+        var numBytesDecrypted: size_t = 0
+        let options = CCOptions(kCCOptionPKCS7Padding)
+
+        let cryptStatus = clearData.withUnsafeMutableBytes { cryptBytes in
+            ciphertext.withUnsafeBytes { cipherBytes in
+                keyData.withUnsafeBytes { keyBytes in
+                    // If we have an IV, call CCCrypt with the IV pointer, otherwise pass nil
+                    if let iv = ivData {
+                        return iv.withUnsafeBytes { ivBytes in
+                            CCCrypt(CCOperation(kCCDecrypt),
+                                    CCAlgorithm(kCCAlgorithmAES128),
+                                    options,
+                                    keyBytes.baseAddress, keyLength,
+                                    ivBytes.baseAddress,
+                                    cipherBytes.baseAddress, ciphertext.count,
+                                    cryptBytes.baseAddress, clearLength,
+                                    &numBytesDecrypted)
+                        }
+                    } else {
+                        return CCCrypt(CCOperation(kCCDecrypt),
+                                        CCAlgorithm(kCCAlgorithmAES128),
+                                        options,
+                                        keyBytes.baseAddress, keyLength,
+                                        nil,
+                                        cipherBytes.baseAddress, ciphertext.count,
+                                        cryptBytes.baseAddress, clearLength,
+                                        &numBytesDecrypted)
+                    }
                 }
             }
         }
-        
+
         if UInt32(cryptStatus) == UInt32(kCCSuccess) {
             clearData.count = numBytesDecrypted
-        }
-        else {
+        } else {
             print("Decryption failed")
             return nil
         }
-        
-        return clearData;
+
+        return clearData
     }
 }

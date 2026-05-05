@@ -8,7 +8,7 @@ $secret = "H@cKIm_2@15*nu11(0N";
 $newmsg = urldecode($_POST['msg']);
 
 
-if($checksum === hash("sha256", $secret . $newmsg))
+if($checksum === hash_hmac("sha256", $newmsg, $secret))
 {
 	$a = explode("|" , $newmsg);
         $price = end($a);

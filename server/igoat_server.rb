@@ -95,7 +95,7 @@ class GoatServer < Sinatra::Base
       response.body="The user's login credentials were stolen by everyone on your Wi-Fi!"
     else
     headers "X-Goat-Secure" => request.secure?.to_s
-    response.set_cookie("SessionID", "34A7EF-115C24-8F21CD-#{increment_count}")
+    response.set_cookie("SessionID", { value: "34A7EF-115C24-8F21CD-#{increment_count}", path: "/", secure: true, httponly: true, same_site: :strict })
     end
   end
 
@@ -105,7 +105,7 @@ class GoatServer < Sinatra::Base
       response.body="The client has connected to the legitimate server; however, the user's login credentials were stolen by everyone on your Wi-Fi!"
     else
       headers "X-Goat-Secure" => request.secure?.to_s
-      response.set_cookie("SessionID", "34A7EF-115C24-8F21CD-#{increment_count}")
+      response.set_cookie("SessionID", { value: "34A7EF-115C24-8F21CD-#{increment_count}", path: "/", secure: true, httponly: true, same_site: :strict })
       response.body="The client has connected to the legitimate SSL server; the user's login credentials cannot be stolen via unencrypted traffic interception"
     end
   end
@@ -158,7 +158,7 @@ class HostileSSLServer < Sinatra::Base
     log_stolen_info "The mobile app has connected to a non-legitimate SSL server"
     headers "X-Goat-Secure" => request.secure?.to_s
     headers "X-Goat-LegitimateServer" => "false"
-    response.set_cookie("SessionID", "34A7EF-115C24-8F21CD-#{increment_count}")
+    response.set_cookie("SessionID", { value: "34A7EF-115C24-8F21CD-#{increment_count}", path: "/", secure: true, httponly: true, same_site: :strict })
     response.body="The mobile app has been tricked into connecting to this non-legitimate SSL server; the user's login credentials will be transmitted directly to this server"
   end
 
